@@ -1,0 +1,1 @@
+SELECT COUNT(*) FROM [DATAEX].[001_sales]
