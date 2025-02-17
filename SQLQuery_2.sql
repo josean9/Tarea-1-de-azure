@@ -27,3 +27,4 @@ SELECT
     Sales_Date,
     CAST(CONVERT(date,Sales_Date,103) AS DATE) as Fecha_Convertida
 FROM [DATAEX].[001_sales]
+
