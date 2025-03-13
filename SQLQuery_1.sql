@@ -9,6 +9,7 @@ SELECT * FROM [usecases].DATAEX.[008_cac]
 SELECT * FROM [usecases].DATAEX.[009_motivo_venta]
 SELECT * FROM [usecases].DATAEX.[010_forma_pago]
 SELECT * FROM [usecases].DATAEX.[011_tienda]
+SELECT * FROM [usecases].DATAEX.[012_provincia]
 SELECT * FROM [usecases].DATAEX.[014_categoría_producto]
 SELECT * FROM [usecases].DATAEX.[017_logist]
 SELECT * FROM [usecases].DATAEX.[018_edad]
@@ -117,8 +118,8 @@ ORDER BY Sales_Count DESC;
 SELECT m.CP
 FROM [usecases].DATAEX.[019_Mosaic] m
 LEFT JOIN [usecases].DATAEX.[005_cp] c
-ON m.CP = c.CP
-WHERE c.CP IS NULL
+ON m.CP = REPLACE(c.CP, 'CP', '')
+WHERE REPLACE(c.CP, 'CP', '') IS NULL
 GROUP BY m.CP;
 
 -- Cuenta cuántas veces aparece cada CP en [019_Mosaic]
@@ -128,3 +129,38 @@ SELECT m.CP, COUNT(*) AS Count
 FROM [usecases].DATAEX.[019_Mosaic] m
 GROUP BY m.CP
 ORDER BY Count DESC;
+
+-- Verifica si CP y CP_value tienen los mismos valores en [019_Mosaic]
+SELECT CP, CP_value
+FROM [usecases].DATAEX.[019_Mosaic]
+WHERE CP <> CP_value;
+
+
+-- Verifica si hay valores en PROV de [019_Mosaic] que no existen en PROVINCIA_ID de [012_provincia]
+-- Si esta consulta devuelve resultados, significa que hay valores en PROV de [019_Mosaic] que no existen en PROVINCIA_ID de [012_provincia].
+SELECT m.PROV
+FROM [usecases].DATAEX.[019_Mosaic] m
+LEFT JOIN [usecases].DATAEX.[012_provincia] p
+ON m.PROV = p.PROVINCIA_ID
+WHERE p.PROVINCIA_ID IS NULL
+GROUP BY m.PROV;
+
+-- Verifica si hay valores en PROVINCIA_ID de [012_provincia] que no existen en PROV de [019_Mosaic]
+-- Si esta consulta devuelve resultados, significa que hay valores en PROVINCIA_ID de [012_provincia] que no existen en PROV de [019_Mosaic].
+SELECT p.PROVINCIA_ID
+FROM [usecases].DATAEX.[012_provincia] p
+LEFT JOIN [usecases].DATAEX.[019_Mosaic] m
+ON p.PROVINCIA_ID = m.PROV
+WHERE m.PROV IS NULL
+GROUP BY p.PROVINCIA_ID;
+
+-- Obtiene los valores únicos de PROV y su correspondiente valor en PROV_INE en [019_Mosaic]
+SELECT DISTINCT PROV, PROV_INE
+FROM [usecases].DATAEX.[019_Mosaic]
+ORDER BY PROV;
+
+-- Obtiene los valores únicos de PROV y su correspondiente valor en PROV_INE en [019_Mosaic]
+SELECT DISTINCT PROVINCIA_ID, PROV_DESC
+FROM [usecases].DATAEX.[012_provincia]
+ORDER BY PROVINCIA_ID;
+
