@@ -10,3 +10,5 @@ SELECT
     TIENDA_ID,           -- ID de la tienda
     code_                -- Código adicional
 FROM [DATAEX].[001_sales];
+
+
