@@ -2,12 +2,13 @@ SELECT
     s.CODE,                          -- Código de la venta
     s.Sales_Date,                    -- Fecha de la venta
     s.Customer_ID,                   -- ID del cliente
-    s.ID_Producto,                   -- ID del producto
+    s.Id_Producto,                    -- ID del producto
     s.PVP,                           -- Precio de venta al público
     s.IMPUESTOS,                     -- Impuestos
     s.COSTE_VENTA_NO_IMPUESTOS,      -- Coste de venta sin impuestos
     fp.FORMA_PAGO AS Forma_Pago,     -- Descripción de la forma de pago
     mv.MOTIVO_VENTA AS Motivo_Venta, -- Descripción del motivo de la venta
+    t.TIENDA_ID,        -- ID de la tienda
     t.TIENDA_DESC AS Tienda,         -- Descripción de la tienda
     e.Car_Age,                       -- Edad del coche (Car Age)
     c.QUEJA,                         -- Queja (si existe)
@@ -16,8 +17,10 @@ SELECT
     co.GastosMarketing,              -- Gastos de marketing
     co.Margendistribuidor,           -- Margen del distribuidor
     co.Comisión_Marca,               -- Comisión de la marca (si está disponible)
+
     -- Cálculo del Margen Bruto
     ROUND(s.PVP * (co.Margen) * 0.01 * (1 - s.IMPUESTOS / 100), 2) AS Margen_eur_bruto,
+    
     -- Cálculo del Margen Neto
     ROUND(
         s.PVP * (co.Margen) * 0.01 * (1 - s.IMPUESTOS / 100) 
@@ -26,6 +29,7 @@ SELECT
         - co.Costetransporte, 
         2
     ) AS Margen_eur
+
 FROM 
     DATAEX.[001_sales] s
 LEFT JOIN 
@@ -39,9 +43,11 @@ LEFT JOIN
 LEFT JOIN 
     DATAEX.[008_cac] c ON s.CODE = c.CODE  -- Join para quejas
 LEFT JOIN 
-    DATAEX.[006_producto] p ON s.ID_Producto = p.Id_Producto  -- Join para producto
+    DATAEX.[006_producto] p ON s.Id_Producto = p.Id_Producto  -- Join para producto
 LEFT JOIN 
     DATAEX.[007_costes] co ON p.Modelo = co.Modelo;  -- Join para costes
+
+
 
 
 
@@ -60,19 +66,34 @@ SELECT
     C.STATUS_SOCIAL,              -- Status social del cliente
     CP.Poblacion,                 -- Población (de la tabla 005_cp)
     CP.Provincia,                 -- Provincia (de la tabla 005_cp)
-    M.Renta_Media,                -- Renta media del área (de la tabla 019_Mosaic)
-    M.Max_Mosaic,                  -- Segmentación socioeconómica (de la tabla 019_Mosaic)
-    M.Mosaic_number               -- Número de segmentación (de la tabla 019_Mosaic)
+    mosaic.A,                             -- Variable A de Mosaic
+    mosaic.B,                             -- Variable B de Mosaic
+    mosaic.C,                             -- Variable C de Mosaic
+    mosaic.D,                             -- Variable D de Mosaic
+    mosaic.E,                             -- Variable E de Mosaic
+    mosaic.F,                             -- Variable F de Mosaic
+    mosaic.G,                             -- Variable G de Mosaic
+    mosaic.H,                             -- Variable H de Mosaic
+    mosaic.I,                             -- Variable I de Mosaic
+    mosaic.J,                             -- Variable J de Mosaic
+    mosaic.K,                             -- Variable K de Mosaic
+    mosaic.U2,                            -- Variable U2 de Mosaic
+    mosaic.Max_Mosaic_G,                  -- Max Mosaic G
+    mosaic.Max_Mosaic2,                   -- Max Mosaic 2
+    mosaic.Renta_Media,                   -- Renta media de Mosaic
+    mosaic.F2,                            -- Variable F2 de Mosaic
+    mosaic.Max_Mosaic,                    -- Max Mosaic
+    mosaic.Mosaic_number                  -- Número de Mosaic
 FROM 
     [DATAEX].[003_clientes] C
-JOIN 
-    [DATAEX].[005_cp] CP 
-    ON RIGHT('00000' + CAST(C.CODIGO_POSTAL AS VARCHAR), 5) = CP.codigopostalid
-JOIN 
-    [DATAEX].[019_Mosaic] M 
-    ON CP.codigopostalid = M.CP;
+LEFT JOIN 
+    [usecases].DATAEX.[005_cp] cp ON C.CODIGO_POSTAL = cp.CP 
+LEFT JOIN 
+    [DATAEX].[019_Mosaic] mosaic 
+    ON TRY_CAST(cp.codigopostalid AS INT) = TRY_CAST(mosaic.CP AS INT);  -- Join para Mosaic
 
-
+--- dame las repeticiones de la columna Id_Producto de la tabla [usecases].DATAEX.[006_producto]
+SELECT [Id_Producto], COUNT(*) FROM [usecases].DATAEX.[006_producto] GROUP BY [Id_Producto] HAVING COUNT(*) > 0
 --- Dimension producto DATAEX.DIM_PRODUCTO
 SELECT
     p.Id_Producto,         -- ID del producto
@@ -82,10 +103,7 @@ SELECT
     p.TIPO_CARROCERIA,     -- Tipo de carrocería
     p.TRANSMISION_ID,      -- Tipo de transmisión
     f.FUEL,                -- Tipo de combustible
-    cp.Equipamiento,       -- Equipamiento
-    s.PVP,                 -- Precio de venta al público (PVP)
-    COUNT(s.ID_Producto) AS Cantidad,  -- Cantidad de productos vendidos
-    (s.PVP * COUNT(s.ID_Producto)) AS PVP_Total  -- PVP multiplicado por la cantidad de productos
+    cp.Equipamiento       -- Equipamiento
 FROM 
     DATAEX.[006_producto] p
 LEFT JOIN 
@@ -94,11 +112,7 @@ LEFT JOIN
     DATAEX.[015_fuel] f ON p.Fuel_ID = f.Fuel_ID           -- Join para fuel
 LEFT JOIN 
     DATAEX.[014_categoría_producto] cp ON p.CATEGORIA_ID = cp.CATEGORIA_ID  -- Join para equipamiento
-LEFT JOIN 
-    DATAEX.[001_sales] s ON p.Id_Producto = s.ID_Producto  -- Join para ventas
-GROUP BY 
-    p.Id_Producto, p.Code_, p.Modelo, p.Kw, p.TIPO_CARROCERIA, p.TRANSMISION_ID, f.FUEL, cp.Equipamiento, s.PVP;
-SELECT * FROM [DATAEX].[002_date]
+
 
 
 -- Dimension tiempo DATAEX.DIM_TIEMPO

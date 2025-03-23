@@ -15,7 +15,7 @@ SELECT * FROM [usecases].DATAEX.[017_logist]
 SELECT * FROM [usecases].DATAEX.[018_edad]
 SELECT * FROM [usecases].DATAEX.[019_Mosaic]
 --- quiero ver si en la tabla [usecases].DATAEX.[011_tienda] se repite el campo [TIENDA_ID] para ver si es la pk
-SELECT [TIENDA_ID], COUNT(*) FROM [usecases].DATAEX.[001_sales] GROUP BY [TIENDA_ID] HAVING COUNT(*) > 1
+SELECT [TIENDA_ID], COUNT(*) FROM [usecases].DATAEX.[001_sales] GROUP BY [TIENDA_ID] HAVING COUNT(*) > 0
 ---quiero ver cual es la pk de la tabla [usecases].DATAEX.[017_logist]
 SELECT [CODE], COUNT(*) FROM [usecases].DATAEX.[017_logist] GROUP BY [CODE] HAVING COUNT(*) > 1
 ---quiero ver cual es la pk de la tabla [usecases].DATAEX.[004_rev] CODE
