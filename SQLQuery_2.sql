@@ -1,30 +1,82 @@
-SELECT column_name, data_type
-from information_schema.columns
-where table_name = '001_sales';
----- ver de que tipo es cada columna
----- al hacer join tienen que coincidir los tipos de datos
-
-SELECT [Id_Producto], 
-COUNT([Id_Producto]) as numero_de_productos, 
-ROUND(avg([PVP]),2) as precio_medio
-FROM [DATAEX].[001_sales]
-GROUP BY [Id_Producto]
+SELECT * FROM [DATAEX].[FACT_SALES]
 
 
-----Conteo de productos distintivos y no nulos
-SELECT [Id_Producto],
-COUNT([Id_Producto]) as numero_de_productos,
-COUNT(DISTINCT[Id_Producto]) as numero_de_productos_distintos,
-ROUND(AVG(CAST([PVP] AS FLOAT)), 2 ) as precio_medio
-FROM [DATAEX].[001_sales]
-WHERE [Id_Producto] IS NOT NULL
-GROUP BY [Id_Producto]
-
-
-
-----convertir fecha de formato texto a numero
 SELECT 
-    Sales_Date,
-    CAST(CONVERT(date,Sales_Date,103) AS DATE) as Fecha_Convertida
-FROM [DATAEX].[001_sales]
+    Customer_ID,
+    AVG(Margen_eur) AS Margen_Promedio
+FROM 
+    DATAEX.FACT_SALES
+GROUP BY 
+    Customer_ID;
 
+
+
+
+
+WITH Ultima_Compra AS (
+    SELECT 
+        Customer_ID,
+        MAX(TRY_CONVERT(DATE, Sales_Date, 103)) AS Ultima_Fecha_Compra
+    FROM 
+        DATAEX.FACT_SALES
+    GROUP BY 
+        Customer_ID
+)
+SELECT 
+    Customer_ID,
+    Ultima_Fecha_Compra,
+    DATEDIFF(DAY, Ultima_Fecha_Compra, GETDATE()) AS Dias_Desde_Ultima_Compra,
+    CASE 
+        WHEN DATEDIFF(DAY, Ultima_Fecha_Compra, GETDATE()) <= 800 THEN 1
+        ELSE 0
+    END AS r
+FROM 
+    Ultima_Compra;
+
+
+
+
+
+
+
+
+WITH Margen_Promedio AS (
+    SELECT 
+        Customer_ID,
+        AVG(Margen_eur) AS Margen_Promedio
+    FROM 
+        DATAEX.FACT_SALES
+    GROUP BY 
+        Customer_ID
+),
+Ultima_Compra AS (
+    SELECT 
+        Customer_ID,
+        MAX(TRY_CONVERT(DATE, Sales_Date, 103)) AS Ultima_Fecha_Compra
+    FROM 
+        DATAEX.FACT_SALES
+    GROUP BY 
+        Customer_ID
+),
+Retencion AS (
+    SELECT 
+        Customer_ID,
+        CASE 
+            WHEN DATEDIFF(DAY, Ultima_Fecha_Compra, GETDATE()) <= 800 THEN 1  -- Retenido si ha comprado en los últimos 800 días
+            ELSE 0  -- No retenido
+        END AS r
+    FROM 
+        Ultima_Compra
+)
+SELECT 
+    m.Customer_ID,
+    m.Margen_Promedio,
+    r.r,
+    CASE 
+        WHEN r.r = 1 THEN m.Margen_Promedio * (1 / 0.1)  -- Fórmula del CLTV cuando r = 1
+        ELSE 0  -- Si r = 0, el CLTV es 0
+    END AS CLTV
+FROM 
+    Margen_Promedio m
+JOIN 
+    Retencion r ON m.Customer_ID = r.Customer_ID;

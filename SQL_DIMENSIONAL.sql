@@ -115,30 +115,16 @@ LEFT JOIN
 
 
 
--- Dimension tiempo DATAEX.DIM_TIEMPO
-SELECT
-    Date,  -- Fecha completa (YYYY-MM-DD)
-    Anno,                -- Año
-    Mes,                 -- Mes (1-12)
-    Mes_Desc,    -- Nombre del mes (Enero, Febrero, etc.)
-    Dia,                 -- Día del mes (1-31)
-    Diadelasemana,         -- Día de la semana (1=Lunes, 2=Martes, etc.)
-    Diadelesemana_desc, -- Nombre del día (Lunes, Martes, etc.)
-    week,              -- Semana del año (1-52)
-    Festivo,      -- ¿Es festivo? (Sí/No)
-    FindeSemana,  -- ¿Es fin de semana? (Sí/No)
-    Laboral        -- ¿Es día laboral? (Sí/No)
-FROM
-    [DATAEX].[002_date];
+    -- Dimension tiempo DATAEX.DIM_TIEMPO
+    SELECT * FROM [DATAEX].[002_date];
+
 
 
 -- Dimension tienda DATAEX.DIM_LUGAR
 SELECT 
     t.TIENDA_ID ,          -- PK de la tienda
     t.TIENDA_DESC ,      -- Descripción de la tienda
-    p.PROVINCIA_ID ,    -- FK de la provincia
     p.PROV_DESC ,     -- Descripción de la provincia
-    z.ZONA_ID ,              -- FK de la zona
     z.ZONA             -- Descripción de la zona
 FROM 
     DATAEX.[011_tienda] t
@@ -146,4 +132,3 @@ LEFT JOIN
     DATAEX.[012_provincia] p ON t.PROVINCIA_ID = p.PROVINCIA_ID  -- Join con provincia
 LEFT JOIN 
     DATAEX.[013_zona] z ON t.ZONA_ID = z.ZONA_ID;                -- Join con zona
-
