@@ -13,6 +13,7 @@ SELECT
     e.Car_Age,                       -- Edad del coche (Car Age)
     c.QUEJA,                         -- Queja (si existe)
     p.Modelo,                        -- Modelo del producto
+    R.DIAS_DESDE_ULTIMA_REVISION, -- Días desde la última revisión
     co.Costetransporte,              -- Coste de transporte
     co.GastosMarketing,              -- Gastos de marketing
     co.Margendistribuidor,           -- Margen del distribuidor
@@ -32,6 +33,8 @@ SELECT
 
 FROM 
     DATAEX.[001_sales] s
+LEFT JOIN 
+    [DATAEX].[004_rev] R ON s.CODE = R.CODE  -- Join para revisiones
 LEFT JOIN 
     DATAEX.[010_forma_pago] fp ON s.FORMA_PAGO_ID = fp.FORMA_PAGO_ID  -- Join para forma de pago
 LEFT JOIN 
@@ -64,6 +67,7 @@ SELECT
     C.Fecha_nacimiento,           -- Fecha de nacimiento del cliente
     C.RENTA_MEDIA_ESTIMADA,       -- Renta media estimada del cliente
     C.STATUS_SOCIAL,              -- Status social del cliente
+    
     CP.Poblacion,                 -- Población (de la tabla 005_cp)
     CP.Provincia,                 -- Provincia (de la tabla 005_cp)
     mosaic.A,                             -- Variable A de Mosaic
@@ -86,6 +90,7 @@ SELECT
     mosaic.Mosaic_number                  -- Número de Mosaic
 FROM 
     [DATAEX].[003_clientes] C
+
 LEFT JOIN 
     [usecases].DATAEX.[005_cp] cp ON C.CODIGO_POSTAL = cp.CP 
 LEFT JOIN 
