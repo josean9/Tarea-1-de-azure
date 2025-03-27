@@ -149,68 +149,175 @@ LEFT JOIN
 
 
 
-    WITH Customer_Data AS (
+    
+
+
+
+SELECT 
+    COUNT(*) AS Total_Valores_Nulos_O_Vacios
+FROM 
+    [DATAEX].[FACT_SALES]
+WHERE 
+    Car_Age IS NULL OR Car_Age = '';
+
+
+
+SELECT * FROM [DATAEX].[FACT_SALES]
+
+
+WITH Margen_Promedio AS (
+    -- Calcula el margen promedio por cliente
     SELECT 
         Customer_ID,
-        AVG(Margen_eur) AS Margen_Promedio,
-        COUNT(*) AS Total_Compras,
-        MIN(CASE 
-            WHEN DIAS_DESDE_ULTIMA_REVISION = '' THEN NULL
-            WHEN DIAS_DESDE_ULTIMA_REVISION IS NULL THEN NULL
-            ELSE TRY_CAST(DIAS_DESDE_ULTIMA_REVISION AS INT)
-        END) AS Dias_Ultima_Revision
+        AVG(Margen_eur) AS Margen_Promedio
     FROM 
         DATAEX.FACT_SALES
     GROUP BY 
         Customer_ID
 ),
-Customer_Retention AS (
-    SELECT
+Datos_Revision AS (
+    -- Calcula los promedios de PVP, Edad del coche y KM de la última revisión por cliente
+    SELECT 
         Customer_ID,
-        CASE
-            WHEN Dias_Ultima_Revision IS NULL THEN 0
-            WHEN Dias_Ultima_Revision > 800 THEN 0.2  -- Tasa de retención baja
-            WHEN Dias_Ultima_Revision > 400 THEN 0.5  -- Tasa de retención media
-            ELSE 0.8  -- Tasa de retención alta (clientes recientes)
-        END AS R_t,
-        CASE
-            WHEN Dias_Ultima_Revision IS NULL THEN 'NO'
-            ELSE CAST(Dias_Ultima_Revision AS VARCHAR(20))
-        END AS Dias_Revision_Texto,
-        Margen_Promedio,
-        Total_Compras
-    FROM
-        Customer_Data
+        AVG(PVP) AS Avg_PVP,
+        AVG(Car_Age) AS Avg_Edad_Coche,
+        AVG(KM_Ultima_Revision_Final) AS Avg_KM_Coche
+    FROM 
+        DATAEX.FACT_SALES
+    GROUP BY 
+        Customer_ID
 ),
-CLTV_Calculation AS (
-    SELECT
+Regresion AS (
+    -- Calcula la regresión logística para obtener r entre 0 y 1
+    SELECT 
         Customer_ID,
-        Margen_Promedio,
-        Dias_Revision_Texto,
-        R_t,
-        Total_Compras,
-        -- Parámetros configurables
-        1000 AS Costo_AC,  -- Costo de adquisición del cliente
-        0.07 AS i,        -- Tasa de descuento
-        5 AS N,           -- Período de proyección (años)
-        
-        -- Cálculo del CLTV según la fórmula proporcionada
-        (
-            SELECT SUM(
-                (1 * Margen_Promedio * POWER(R_t, t+1)) / POWER(1 + 0.07, t)
-            FROM (VALUES (0),(1),(2),(3),(4)) AS Years(t)
-        ) - 1000 AS CLTV
-    FROM
-        Customer_Retention
+        1.0 / (1 + EXP(-1 * (0.5 * Avg_PVP + 0.3 * Avg_Edad_Coche - 0.2 * Avg_KM_Coche))) AS r
+    FROM 
+        Datos_Revision
+),
+Sumatorio AS (
+    -- Calcula el sumatorio de r^n / (1 + 0.07)^n para n de 1 a 5
+    SELECT 
+        m.Customer_ID,
+        SUM(POWER(r.r, n) / POWER(1 + 0.07, n)) AS Factor_Descuento
+    FROM 
+        Margen_Promedio m
+    JOIN 
+        Regresion r ON m.Customer_ID = r.Customer_ID
+    CROSS JOIN (SELECT 1 AS n UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5) AS Numeros
+    GROUP BY 
+        m.Customer_ID
 )
-SELECT
-    Customer_ID,
-    Margen_Promedio,
-    Dias_Revision_Texto AS Dias_Ultima_Revision,
-    ROUND(R_t, 2) AS Tasa_Retencion,
-    Total_Compras,
-    ROUND(CLTV, 2) AS CLTV_Calculado
-FROM
-    CLTV_Calculation
-ORDER BY
-    CLTV_Calculado DESC;
+-- Calcula el CLTV final
+SELECT 
+    m.Customer_ID,
+    m.Margen_Promedio,
+    r.r AS Retencion,
+    ROUND(m.Margen_Promedio * s.Factor_Descuento, 2) AS CLTV
+FROM 
+    Margen_Promedio m
+LEFT JOIN 
+    Regresion r ON m.Customer_ID = r.Customer_ID
+LEFT JOIN 
+    Sumatorio s ON m.Customer_ID = s.Customer_ID;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+WITH Mediana_Car_Age AS (
+    -- Calcula la mediana de la columna Car_Age
+    SELECT 
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY TRY_CAST(Car_Age AS FLOAT)) 
+        OVER () AS Mediana
+    FROM 
+        DATAEX.FACT_SALES
+    WHERE 
+        Car_Age IS NOT NULL AND Car_Age != ''
+),
+Fact_Sales_Limpio AS (
+    -- Reemplaza valores NULL o vacíos en Car_Age con la mediana calculada
+    SELECT 
+        Customer_ID,
+        PVP,
+        COALESCE(NULLIF(Car_Age, ''), (SELECT DISTINCT Mediana FROM Mediana_Car_Age)) AS Car_Age,
+        KM_Ultima_Revision_Final,
+        Margen_eur
+    FROM 
+        DATAEX.FACT_SALES
+),
+Margen_Promedio AS (
+    -- Calcula el margen promedio por cliente
+    SELECT 
+        Customer_ID,
+        AVG(Margen_eur) AS Margen_Promedio
+    FROM 
+        Fact_Sales_Limpio
+    GROUP BY 
+        Customer_ID
+),
+Datos_Revision AS (
+    -- Calcula los promedios de PVP, Edad del coche y KM de la última revisión por cliente
+    SELECT 
+        Customer_ID,
+        AVG(PVP) AS Avg_PVP,
+        AVG(Car_Age) AS Avg_Edad_Coche,
+        AVG(KM_Ultima_Revision_Final) AS Avg_KM_Coche
+    FROM 
+        Fact_Sales_Limpio
+    GROUP BY 
+        Customer_ID
+),
+Regresion AS (
+    -- Calcula la regresión logística para obtener r entre 0 y 1
+    SELECT 
+        Customer_ID,
+        1.0 / (1 + EXP(-1 * (0.5 * Avg_PVP + 0.3 * Avg_Edad_Coche - 0.2 * Avg_KM_Coche))) AS r
+    FROM 
+        Datos_Revision
+),
+Sumatorio AS (
+    -- Calcula el sumatorio de r^n / (1 + 0.07)^n para n de 1 a 5
+    SELECT 
+        m.Customer_ID,
+        SUM(POWER(r.r, n) / POWER(1 + 0.07, n)) AS Factor_Descuento
+    FROM 
+        Margen_Promedio m
+    JOIN 
+        Regresion r ON m.Customer_ID = r.Customer_ID
+    CROSS JOIN (SELECT 1 AS n UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5) AS Numeros
+    GROUP BY 
+        m.Customer_ID
+)
+-- Calcula el CLTV final
+SELECT 
+    m.Customer_ID,
+    m.Margen_Promedio,
+    r.r AS Retencion,
+    ROUND(m.Margen_Promedio * s.Factor_Descuento, 2) AS CLTV
+FROM 
+    Margen_Promedio m
+LEFT JOIN 
+    Regresion r ON m.Customer_ID = r.Customer_ID
+LEFT JOIN 
+    Sumatorio s ON m.Customer_ID = s.Customer_ID;
