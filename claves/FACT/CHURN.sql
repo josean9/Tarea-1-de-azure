@@ -19,8 +19,8 @@ GO
 -- Actualizar los valores de churn según la lógica requerida
 UPDATE DATAEX.FACT_SALES 
 SET churn = CASE 
-    WHEN KM_Ultima_Revision_Final IS NULL THEN 0
-    WHEN KM_Ultima_Revision_Final > 400 THEN 0
+    WHEN DIAS_DESDE_ULTIMA_REVISION IS NULL THEN 0
+    WHEN DIAS_DESDE_ULTIMA_REVISION > 400 THEN 0
     ELSE 1
 END;
 GO

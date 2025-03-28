@@ -5,7 +5,7 @@ SELECT
     AVG(ISNULL(fact.Revisiones, 0)) AS avg_revisiones,
 
     -- Porcentaje de Churn: Incremento de churn por PVP.
-    AVG(CAST(Churn AS FLOAT)) AS churn_percentage
+    AVG(CAST(churn AS FLOAT)) AS churn_percentage
 
-FROM DATAEX.TABLA_DE_CLIENTES fact
+FROM DATAEX.FACT_SALES fact
 GROUP BY fact.PVP;
