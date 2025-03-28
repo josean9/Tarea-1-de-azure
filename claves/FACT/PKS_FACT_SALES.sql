@@ -1,3 +1,19 @@
+---Ponemos para que date sea la pk de la tabla dim tiempo
+ALTER TABLE DATAEX.DIM_TIEMPO
+ADD CONSTRAINT PK_DIM_TIEMPO PRIMARY KEY (Date);
+
+---Ponemos para que date sea la pk de la tabla dim tiempo
+ALTER TABLE DATAEX.DIM_PRODUCTO
+ADD CONSTRAINT PK_DIM_PRODUCTO PRIMARY KEY (Id_Producto);
+
+---Ponemos para que date sea la pk de la tabla dim tiempo
+ALTER TABLE DATAEX.DIM_LUGAR
+ADD CONSTRAINT PK_DIM_LUGAR PRIMARY KEY (TIENDA_ID);
+
+-- Establecer Customer_ID como clave foránea que referencia DIM_CLIENTE
+ALTER TABLE DATAEX.DIM_CLIENTE
+ADD CONSTRAINT PK_Customer_ID PRIMARY KEY (Customer_ID)
+
 -- Establecer CODE como clave primaria
 ALTER TABLE DATAEX.FACT_SALES
 ADD CONSTRAINT PK_DATAEXFACT_SALES PRIMARY KEY (CODE);

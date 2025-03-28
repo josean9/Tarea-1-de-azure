@@ -62,7 +62,7 @@ FROM
 JOIN 
     DATAEX.DIM_CLIENTE cli ON s.Customer_ID = cli.Customer_ID
 
-
+--PARA CREAR LA TABLA DE CLIENTES
 -- Primero verificamos si la tabla existe y la eliminamos si es necesario
 IF OBJECT_ID('TABLA_DE_CLIENTES', 'U') IS NOT NULL
     DROP TABLE TABLA_DE_CLIENTES;
@@ -127,7 +127,7 @@ SELECT
         ELSE 1
     END AS churn                     -- Indicador de churn
 INTO 
-    TABLA_DE_CLIENTES
+    DATAEX.TABLA_DE_CLIENTES
 FROM 
     DATAEX.FACT_SALES s
 JOIN 

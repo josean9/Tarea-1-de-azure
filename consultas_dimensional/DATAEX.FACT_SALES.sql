@@ -23,6 +23,7 @@ SELECT DISTINCT
     c.QUEJA,                         -- Queja (si existe)
     p.Modelo,                        -- Modelo del producto
     R.DIAS_DESDE_ULTIMA_REVISION,    -- Días desde la última revisión
+    R.Revisiones,                   -- Número de revisiones
     COALESCE(
         CASE 
             WHEN R.KM_Ultima_Revision = 0 THEN (SELECT DISTINCT Mediana_KM FROM Mediana_KM)
