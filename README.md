@@ -52,6 +52,6 @@
 
 
 ## ⏳ Orden Recomendado
-    A[1. Codigo_mover_tablas.py] --> B[2. regresion.ipynb]
+    A[1. Codigo_mover_tablas.ipynb] --> B[2. regresion.ipynb]
     B --> C[3. final.sql]
     C --> D[4. Documentación]
