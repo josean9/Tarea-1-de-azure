@@ -50,6 +50,20 @@
    - Usar el PDF para visión general  
    - El Excel para detalles técnicos de campos
 
+   ## 🛠️ Configuración del Entorno
+
+### Activación del entorno virtual (Windows)
+
+1. **Navegar a tu ruta del proyecto**:
+   en la powersehll
+   cd "RUTA\DONDE\TENGAS\EL\PROYECTO"
+
+.\env_necesario\Scripts\activate
+
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+pip install -r requirements.txt
+
 ## ⏳ Orden Recomendado
 ```mermaid
 graph TD
