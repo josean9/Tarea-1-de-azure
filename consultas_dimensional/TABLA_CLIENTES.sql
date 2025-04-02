@@ -132,3 +132,85 @@ FROM
     DATAEX.FACT_SALES s
 JOIN 
     DATAEX.DIM_CLIENTE cli ON s.Customer_ID = cli.Customer_ID;
+
+
+-- Asegurar que la columna 'churn_predicho' existe antes de actualizar
+IF NOT EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_NAME = 'FACT_SALES' AND COLUMN_NAME = 'churn_predicho'
+)
+BEGIN
+    ALTER TABLE DATAEX.FACT_SALES ADD churn_predicho FLOAT;
+END
+
+-- Actualizar la tabla DATAEX.FACT_SALES calculando el churn predicho
+UPDATE fs
+SET fs.churn_predicho = (
+    (SELECT Coeficiente FROM dbo.churn_coef WHERE Variable = 'Intercepto') + 
+    (SELECT Coeficiente FROM dbo.churn_coef WHERE Variable = 'avg_car_age') * fs.Car_Age + 
+    (SELECT Coeficiente FROM dbo.churn_coef WHERE Variable = 'avg_km_revision') * fs.Km_medio_por_revision + 
+    (SELECT Coeficiente FROM dbo.churn_coef WHERE Variable = 'avg_revisiones') * fs.Revisiones + 
+    (SELECT Coeficiente FROM dbo.churn_coef WHERE Variable = 'PVP') * fs.PVP
+)
+FROM DATAEX.FACT_SALES fs;
+
+-- Asegurar que los valores de churn_predicho estén en el rango [0,1]
+UPDATE DATAEX.FACT_SALES
+SET churn_predicho = CASE 
+    WHEN churn_predicho < 0 THEN 0 
+    WHEN churn_predicho > 1 THEN 1 
+    ELSE churn_predicho 
+END;
+
+-- Consultar FACT_SALES con la nueva columna churn_predicho
+SELECT * FROM DATAEX.FACT_SALES;
+
+-- Calcular el CLTV para cada cliente en los primeros 5 años
+WITH PromedioMargen AS (
+    SELECT AVG(Margen_eur) AS promedio_margen_eur FROM DATAEX.FACT_SALES
+),
+CLTVCalculado AS (
+    SELECT 
+        fs.Customer_ID,
+        fs.churn_predicho,
+        pm.promedio_margen_eur,
+        (fs.churn_predicho / POWER(1.07, 1)) * pm.promedio_margen_eur AS cltv_1,
+        ((fs.churn_predicho / POWER(1.07, 1)) +
+         (fs.churn_predicho / POWER(1.07, 2))) * pm.promedio_margen_eur AS cltv_2,
+        ((fs.churn_predicho / POWER(1.07, 1)) +
+         (fs.churn_predicho / POWER(1.07, 2)) +
+         (fs.churn_predicho / POWER(1.07, 3))) * pm.promedio_margen_eur AS cltv_3,
+        ((fs.churn_predicho / POWER(1.07, 1)) +
+         (fs.churn_predicho / POWER(1.07, 2)) +
+         (fs.churn_predicho / POWER(1.07, 3)) +
+         (fs.churn_predicho / POWER(1.07, 4))) * pm.promedio_margen_eur AS cltv_4,
+        ((fs.churn_predicho / POWER(1.07, 1)) +
+         (fs.churn_predicho / POWER(1.07, 2)) +
+         (fs.churn_predicho / POWER(1.07, 3)) +
+         (fs.churn_predicho / POWER(1.07, 4)) +
+         (fs.churn_predicho / POWER(1.07, 5))) * pm.promedio_margen_eur AS cltv_5
+    FROM DATAEX.FACT_SALES fs
+    CROSS JOIN PromedioMargen pm
+)
+
+SELECT * FROM CLTVCalculado;
+
+-- Visualizar la tabla de clientes con churn y CLTV
+SELECT 
+    s.CODE, s.Sales_Date, s.Customer_ID, cli.CODIGO_POSTAL_LIMPIO, 
+    cli.Edad AS Cliente_Edad, cli.GENERO AS Cliente_Genero, cli.Fecha_nacimiento, 
+    cli.RENTA_MEDIA_ESTIMADA, cli.STATUS_SOCIAL, cli.Poblacion, cli.Provincia, 
+    cli.A, cli.B, cli.C, cli.D, cli.E, cli.F, cli.G, cli.H, cli.I, cli.J, cli.K, 
+    cli.U2, cli.Max_Mosaic_G, cli.Max_Mosaic2, cli.Renta_Media, cli.F2, 
+    cli.Max_Mosaic, cli.Mosaic_number, s.Id_Producto, s.PVP, s.IMPUESTOS, 
+    s.COSTE_VENTA_NO_IMPUESTOS, s.Forma_Pago, s.Motivo_Venta, s.TIENDA_ID, 
+    s.Tienda, s.Car_Age, s.QUEJA, s.Modelo, s.DIAS_DESDE_ULTIMA_REVISION, 
+    s.Fue_Lead, s.Lead_Compra, s.Lead_Compra_Total, s.KM_Ultima_Revision_Final, 
+    s.Costetransporte, s.GastosMarketing, s.Margendistribuidor, s.Comisión_Marca, 
+    s.Margen_eur_bruto, s.Margen_eur, 
+    CASE 
+        WHEN s.DIAS_DESDE_ULTIMA_REVISION IS NULL OR s.DIAS_DESDE_ULTIMA_REVISION > 400 THEN 0
+        ELSE 1
+    END AS churn
+FROM DATAEX.FACT_SALES s
+JOIN DATAEX.DIM_CLIENTE cli ON s.Customer_ID = cli.Customer_ID;
